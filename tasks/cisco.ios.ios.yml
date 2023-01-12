@@ -185,7 +185,7 @@
       cisco.ios.ios_config:
         lines:
           - description 802.1X with MAB fallback
-          - switchport host
+          - switchport mode access
           - no logging event link-status
           - "{{ (ansible_facts.net_iostype == 'IOS-XE') | ternary('device-tracking attach-policy IPDT_POLICY', None) }}"
           - "{{ interface_authentication_multihost | default(None) }}"
@@ -200,6 +200,7 @@
           - dot1x timeout tx-period 7
           - dot1x max-reauth-req 3
           - storm-control broadcast level 1.00
+          - spanning-tree portfast {{ (ansible_facts.net_iostype == 'IOS') | ternary('edge', None) }}
         parents:
           - interface {{ item.name }}
       when:
