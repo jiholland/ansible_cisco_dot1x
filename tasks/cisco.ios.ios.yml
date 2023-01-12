@@ -174,21 +174,12 @@
   tags: dot1x_interfaces
   block:
 
-    - name: Print information about the next task
-      ansible.builtin.debug:
-        msg:
-          - Next task is gather interface facts.
-          - Timeout is 60 seconds.
-      run_once: true
-
     - name: Gather interface facts
       cisco.ios.ios_facts:
         gather_subset:
           - min
         gather_network_resources:
           - l2_interfaces
-      vars:
-        ansible_command_timeout: 60
 
     - name: Configure dot1x on interface
       cisco.ios.ios_config:
