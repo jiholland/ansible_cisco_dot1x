@@ -1,4 +1,4 @@
-🔐 csico\_dot1x
+🔐 cisco\_dot1x
 ===============
 
 Configure 802.1X.
