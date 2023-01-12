@@ -1,0 +1,221 @@
+---
+# tasks file for cisco_dot1x
+
+- name: Configure radius server hosts
+  when: not ansible_check_mode
+  block:
+
+    - name: Get current radius-servers
+      cisco.ios.ios_command:
+        commands:
+          - show run | inc ^radius server
+      register: output
+
+    - name: Remove radius-servers
+      cisco.ios.ios_config:
+        lines:
+          - no {{ item }}
+      when: item | length > 0
+      loop: "{{ output.stdout_lines | flatten(1) }}"
+
+  always:
+
+    - name: Configure primary radius server host
+      cisco.ios.ios_config:
+        lines:
+          - address ipv4 {{ radius_server_primary_ip }} auth-port 1812 acct-port 1813
+          - key {{ radius_server_key }}
+        parents: radius server {{ radius_server_primary_name }}
+      notify: Save ios
+
+    - name: Configure secondary radius server host
+      cisco.ios.ios_config:
+        lines:
+          - address ipv4 {{ radius_server_secondary_ip }} auth-port 1812 acct-port 1813
+          - key {{ radius_server_key }}
+        parents: radius server {{ radius_server_secondary_name }}
+      notify: Save ios
+
+
+- name: Configure radius servers group
+  block:
+
+    - name: Get radius server groups
+      cisco.ios.ios_command:
+        commands:
+          - show run | inc ^aaa group server radius
+      when: not ansible_check_mode
+      register: output
+
+    - name: Remove radius server groups
+      cisco.ios.ios_config:
+        lines:
+          - no {{ item }}
+      when:
+        - not ansible_check_mode
+        - item | length>0
+      loop: "{{ output.stdout_lines | flatten(1) }}"
+
+  always:
+
+    - name: Configure radius server group
+      cisco.ios.ios_config:
+        lines:
+          - server name {{ radius_server_primary_name }}
+          - server name {{ radius_server_secondary_name }}
+        parents: aaa group server radius {{ radius_server_group }}
+      notify: Save ios
+
+
+- name: Configure radius load-balance
+  block:
+
+    - name: Configure radius least outstanding load-balance globally
+      cisco.ios.ios_config:
+        lines:
+          - radius-server load-balance method least-outstanding
+      notify: Save ios
+
+    - name: Configure radius least outstanding load-balance for radius server group
+      cisco.ios.ios_config:
+        lines:
+          - load-balance method least-outstanding batch-size 10
+        parents:
+          - aaa group server radius {{ radius_server_group }}
+      notify: Save ios
+
+
+- name: Set radius attributes
+  cisco.ios.ios_config:
+    lines:
+      - radius-server dead-criteria time 3 tries 3
+      - radius-server deadtime 10
+      - radius-server attribute 6 on-for-login-auth
+      - radius-server attribute 6 support-multiple
+      - radius-server attribute 8 include-in-access-req
+      - radius-server attribute 25 access-request include
+      - radius-server attribute 31 send nas-port-detail
+      - radius-server attribute 61 extended
+  notify: Save ios
+
+- name: Configure radius change of authorization
+  cisco.ios.ios_config:
+    lines:
+      - client {{ radius_server_primary_ip }} server-key {{ radius_server_key }}
+      - client {{ radius_server_secondary_ip }} server-key {{ radius_server_key }}
+      - auth-type any
+    parents:
+      - aaa server radius dynamic-author
+  when: not ansible_check_mode
+  notify: Save ios
+
+- name: Configure device sensor filters
+  cisco.ios.ios_config:
+    lines:
+      - "{{ item.filter }}"
+    parents:
+      - device-sensor filter-list {{ item.name }} list {{ item.name }}-list
+  loop: "{{ device_sensors }}"
+  loop_control:
+    label: Filter {{ item.filter }} for {{ item.name }}
+  notify: Save ios
+
+- name: Enable device sensor, attribute change updates and filters globally
+  cisco.ios.ios_config:
+    lines:
+      - device-sensor accounting
+      - device-sensor notify all-changes
+      - device-sensor filter-spec dhcp include list dhcp-list
+      - device-sensor filter-spec cdp include list cdp-list
+      - device-sensor filter-spec lldp include list lldp-list
+  notify: Save ios
+
+- name: Configure authentication, authorization and accounting
+  cisco.ios.ios_config:
+    lines:
+      - aaa authentication dot1x default group {{ radius_server_group }}
+      - aaa authorization network default group {{ radius_server_group }}
+      - aaa authorization configuration default group {{ radius_server_group }}
+      - aaa accounting dot1x default start-stop group {{ radius_server_group }}
+      - aaa accounting update newinfo periodic 2880
+  notify: Save ios
+
+- name: Permit mac-move and enable 802.1X globally
+  cisco.ios.ios_config:
+    lines:
+      - authentication mac-move permit
+      - dot1x system-auth-control
+  notify: Save ios
+
+
+- name: Configure device-tracking
+  block:
+
+    - name: Configure device-tracking policy with a custome name
+      cisco.ios.ios_config:
+        lines:
+          - tracking enable
+        parents:
+          - device-tracking policy IPDT_POLICY
+      when: ansible_facts.net_iostype == 'IOS-XE'
+      notify: Save ios
+
+    - name: Enable device-tracking
+      cisco.ios.ios_config:
+        lines:
+          - ip device tracking
+      when:
+        - ansible_facts.net_iostype == 'IOS'
+        - not ansible_check_mode
+      notify: Save ios
+
+
+- name: Ensure dot1x on interfaces
+  tags: dot1x_interfaces
+  block:
+
+    - name: Print information about the next task
+      ansible.builtin.debug:
+        msg:
+          - Next task is gather interface facts.
+          - Timeout is 60 seconds.
+      run_once: true
+
+    - name: Gather interface facts
+      cisco.ios.ios_facts:
+        gather_subset:
+          - min
+        gather_network_resources:
+          - l2_interfaces
+      vars:
+        ansible_command_timeout: 60
+
+    - name: Configure dot1x on interface
+      cisco.ios.ios_config:
+        lines:
+          - description 802.1X with MAB fallback
+          - switchport host
+          - no logging event link-status
+          - "{{ (ansible_facts.net_iostype == 'IOS-XE') | ternary('device-tracking attach-policy IPDT_POLICY', None) }}"
+          - "{{ interface_authentication_multihost | default(None) }}"
+          - authentication order {{ interface_authentication_order }}
+          - authentication priority {{ interface_authentication_priority }}
+          - authentication port-control auto
+          - authentication periodic
+          - authentication timer reauthenticate server
+          - mab
+          - no snmp trap link-status
+          - dot1x pae authenticator
+          - dot1x timeout tx-period 7
+          - dot1x max-reauth-req 3
+          - storm-control broadcast level 1.00
+        parents:
+          - interface {{ item.name }}
+      when:
+        - item.mode is defined
+        - item.mode == 'access'
+        - item.access.vlan is undefined
+      loop: "{{ ansible_facts.network_resources.l2_interfaces }}"
+      loop_control:
+        label: "{{ item.name }}"
+      notify: Save ios

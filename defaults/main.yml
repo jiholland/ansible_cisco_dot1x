@@ -1,0 +1,42 @@
+---
+# defaults file for cisco_dot1x
+
+radius_server_group: ISE-GRP-RADIUS
+radius_server_key: TopSecret
+
+radius_server_primary_name: ISE-PRIMARY
+radius_server_primary_ip: 10.0.0.10
+radius_server_secondary_name: ISE-SECONDARY
+radius_server_secondary_ip: 10.0.0.11
+
+interface_authentication_order: dot1x mab
+interface_authentication_priority: dot1x mab
+interface_authentication_multi_auth: authentication host-mode multi-auth  # Remove if you do not want multi-auth
+
+device_sensors:
+  - name: dhcp
+    filter: option name host-name
+  - name: dhcp
+    filter: option name requested-address
+  - name: dhcp
+    filter: option name parameter-request-list
+  - name: dhcp
+    filter: option name class-identifier
+  - name: dhcp
+    filter: option name client-identifier
+  - name: cdp
+    filter: tlv name device-name
+  - name: cdp
+    filter: tlv name address-type
+  - name: cdp
+    filter: tlv name capabilities-type
+  - name: cdp
+    filter: tlv name version-type
+  - name: cdp
+    filter: tlv name platform-type
+  - name: lldp
+    filter: tlv name system-name
+  - name: lldp
+    filter: tlv name system-description
+  - name: lldp
+    filter: tlv name system-capabilities
