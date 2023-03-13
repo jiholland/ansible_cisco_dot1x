@@ -1,7 +1,7 @@
 ---
-# tasks file for cisco_dot1x
+# tasks file for dot1x
 
-- name: Include tasks
+- name: Include tasks OS-specific tasks.
   ansible.builtin.include_tasks:
-    file: "{{ ansible_network_os }}.yml"
+    file: configure_{{ ansible_network_os }}.yml
   when: network_function == 'access'

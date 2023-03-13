@@ -11,16 +11,17 @@ Requirements
 Role Variables
 --------------
 
-- radius\_server\_group
-- radius\_server\_key
-- radius\_server\_primary\_name
-- radius\_server\_primary\_ip
-- radius\_server\_secondary\_name
-- radius\_server\_secondary\_ip
-- interface\_authentication\_order
-- interface\_authentication\_priority
-- interface\_authentication\_multi\_auth
-- device\_sensors
+- dot1x\_radius\_server\_group
+- dot1x\_radius\_server\_key
+- dot1x\_radius\_server\_primary\_name
+- dot1x\_radius\_server\_primary\_ip
+- dot1x\_radius\_server\_secondary\_name
+- dot1x\_radius\_server\_secondary\_ip
+- dot1x\_interface\_authentication\_order
+- dot1x\_interface\_authentication\_priority
+- dot1x\_interface\_authentication\_multi\_auth
+- dot1x\_radius\_server\_attributes
+- dot1x\_device\_sensors
 
 Dependencies
 ------------
@@ -36,7 +37,7 @@ Example Playbook
       gather_facts: true
 
       roles:
-        - role: cisco_dot1x
+        - role: dot1x
           tags: dot1x
 
 License

@@ -1,6 +1,6 @@
 ---
 galaxy_info:
-  role_name: cisco_dot1x
+  role_name: dot1x
   author: Jørn Ivar Holland
   description: Configure 802.1X.
   license: BSD-3-Clause

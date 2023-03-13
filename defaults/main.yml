@@ -1,19 +1,28 @@
 ---
-# defaults file for cisco_dot1x
+# defaults file for dot1x
 
-radius_server_group: ISE-GRP-RADIUS
-radius_server_key: TopSecret
+dot1x_radius_server_group: ISE-GRP-RADIUS
+dot1x_radius_server_key: TopSecret
 
-radius_server_primary_name: ISE-PRIMARY
-radius_server_primary_ip: 10.0.0.10
-radius_server_secondary_name: ISE-SECONDARY
-radius_server_secondary_ip: 10.0.0.11
+dot1x_radius_server_primary_name: ISE-PRIMARY
+dot1x_radius_server_primary_ip: 10.0.0.10
+dot1x_radius_server_secondary_name: ISE-SECONDARY
+dot1x_radius_server_secondary_ip: 10.0.0.11
 
-interface_authentication_order: dot1x mab
-interface_authentication_priority: dot1x mab
-interface_authentication_multi_auth: authentication host-mode multi-auth  # Remove if you do not want multi-auth
+dot1x_interface_authentication_order: dot1x mab
+dot1x_interface_authentication_priority: dot1x mab
+dot1x_interface_authentication_multi_auth: authentication host-mode multi-auth  # Remove if you do not want multi-auth.
 
-device_sensors:
+dot1x_radius_server_attributes:
+  - deadtime 10
+  - attribute 6 on-for-login-auth
+  - attribute 6 support-multiple
+  - attribute 8 include-in-access-req
+  - attribute 25 access-request include
+  - attribute 31 send nas-port-detail
+  - attribute 61 extended
+
+dot1x_device_sensors:
   - name: dhcp
     filter: option name host-name
   - name: dhcp
