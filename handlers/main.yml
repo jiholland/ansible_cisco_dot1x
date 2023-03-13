@@ -1,9 +1,7 @@
 ---
-# handler for saving the configuration
+# handlers file for dot1x
 
-- name: Save ios
+- name: Save ios.
   cisco.ios.ios_config:
     save_when: always
-  when:
-    - not ansible_check_mode
-    - ansible_network_os == 'cisco.ios.ios'
+  when: not ansible_check_mode
